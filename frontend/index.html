@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>TX Allowed Medical Lookup</title>
+  <title>TX Fair Health Allowed Medical Lookup</title>
 
   <style>
     body {
@@ -13,12 +13,12 @@
     }
 
     h2 {
-      margin-bottom: 10px;
+      margin-bottom: 6px;
     }
 
     .subtext {
       color: #555;
-      margin-bottom: 25px;
+      margin-bottom: 24px;
     }
 
     label {
@@ -27,16 +27,20 @@
       font-weight: bold;
     }
 
-    input {
-      width: 320px;
+    input, textarea {
+      width: 340px;
       padding: 7px;
       font-size: 14px;
       margin-top: 4px;
     }
 
+    textarea {
+      resize: vertical;
+    }
+
     button {
       margin-top: 24px;
-      padding: 10px 24px;
+      padding: 10px 26px;
       font-size: 14px;
       cursor: pointer;
     }
@@ -76,28 +80,35 @@
 
   <h2>TX Fair Health Allowed Medical Lookup</h2>
   <div class="subtext">
-    Enter GeoZip and Procedure Code. Modifier is optional and rarely required. Benchmarks are based on Fair Health percentile.
+    Enter GeoZip and paste one or more Procedure Codes below (one per line).
+    Modifier is optional and rarely required.
   </div>
 
-  <!-- Lookup Form -->
   <form id="lookupForm">
 
     <label for="geozip">GeoZip</label>
     <input id="geozip" type="number" required />
 
-    <label for="code">Procedure Code</label>
-    <input id="code" type="text" required />
+    <label for="codes">
+      Procedure Code(s) <span style="font-weight: normal; color: #555;">(one per line)</span>
+    </label>
+    <textarea
+      id="codes"
+      rows="5"
+      placeholder="29035&#10;10004&#10;81420"
+      required
+    ></textarea>
 
-    <label for="modifier">Modifier (optional — leave blank for most cases)</label>
+    <label for="modifier">
+      Modifier <span style="font-weight: normal; color: #555;">(optional)</span>
+    </label>
     <input id="modifier" type="text" />
 
     <button type="submit">Lookup</button>
   </form>
 
-  <!-- Error Message -->
   <div id="error" class="error"></div>
 
-  <!-- Results Table -->
   <table id="results" style="display:none;">
     <thead>
       <tr>
@@ -113,13 +124,10 @@
         <th>95th</th>
       </tr>
     </thead>
-    <tbody>
-      <tr id="resultRow"></tr>
-    </tbody>
+    <tbody id="resultRows"></tbody>
   </table>
 
 <script>
-  // Allow Enter key to trigger lookup
   document.getElementById("lookupForm").addEventListener("submit", function (e) {
     e.preventDefault();
     lookup();
@@ -128,20 +136,31 @@
   async function lookup() {
     const errorDiv = document.getElementById("error");
     const resultsTable = document.getElementById("results");
+    const rowsContainer = document.getElementById("resultRows");
 
     errorDiv.textContent = "";
     resultsTable.style.display = "none";
+    rowsContainer.innerHTML = "";
 
     const geozip = document.getElementById("geozip").value.trim();
-    const code = document.getElementById("code").value.trim();
+    const codesRaw = document.getElementById("codes").value.trim();
     const modifier = document.getElementById("modifier").value.trim();
 
-    if (!geozip || !code) {
-      errorDiv.textContent = "GeoZip and Procedure Code are required.";
+    if (!geozip || !codesRaw) {
+      errorDiv.textContent = "GeoZip and at least one Procedure Code are required.";
       return;
     }
 
-    let url = `/lookup?geozip=${encodeURIComponent(geozip)}&code=${encodeURIComponent(code)}`;
+    const codes = codesRaw
+      .split(/\r?\n/)
+      .map(c => c.trim())
+      .filter(c => c.length > 0);
+
+    let url = `/lookup?geozip=${encodeURIComponent(geozip)}`;
+    codes.forEach(code => {
+      url += `&code=${encodeURIComponent(code)}`;
+    });
+
     if (modifier) {
       url += `&modifier=${encodeURIComponent(modifier)}`;
     }
@@ -151,23 +170,27 @@
 
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.detail || "No matching record found.");
+        throw new Error(err.detail || "Lookup failed.");
       }
 
-      const data = await response.json();
+      const results = await response.json();
 
-      document.getElementById("resultRow").innerHTML = `
-        <td>${data.description || ""}</td>
-        <td class="match-type">${data.match_type || ""}</td>
-        <td>${data["50th"] || ""}</td>
-        <td>${data["60th"] || ""}</td>
-        <td>${data["70th"] || ""}</td>
-        <td>${data["75th"] || ""}</td>
-        <td>${data["80th"] || ""}</td>
-        <td>${data["85th"] || ""}</td>
-        <td>${data["90th"] || ""}</td>
-        <td>${data["95th"] || ""}</td>
-      `;
+      results.forEach(data => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${data.description || ""}</td>
+          <td class="match-type">${data.match_type || ""}</td>
+          <td>${data["50th"] || ""}</td>
+          <td>${data["60th"] || ""}</td>
+          <td>${data["70th"] || ""}</td>
+          <td>${data["75th"] || ""}</td>
+          <td>${data["80th"] || ""}</td>
+          <td>${data["85th"] || ""}</td>
+          <td>${data["90th"] || ""}</td>
+          <td>${data["95th"] || ""}</td>
+        `;
+        rowsContainer.appendChild(row);
+      });
 
       resultsTable.style.display = "table";
 
