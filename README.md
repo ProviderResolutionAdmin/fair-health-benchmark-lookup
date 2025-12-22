@@ -1,6 +1,6 @@
 # TX-FH-Allowed-Medical
 
-Lookup tool for Texas Fully-Insured allowed medical amounts.
+Lookup tool for Texas Fair Health allowed medical amounts.
 
 ## Purpose
 Allows associates to enter:
