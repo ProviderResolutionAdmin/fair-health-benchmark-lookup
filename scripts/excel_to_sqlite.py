@@ -18,7 +18,13 @@ df.columns = (
 
 # Clean modifier column if present
 if "modifier" in df.columns:
-    df["modifier"] = df["modifier"].replace("", None)
+    import pandas as pd
+
+df["modifier"] = (
+    df["modifier"]
+    .replace(r"^\s*$", pd.NA, regex=True)
+    .astype("Int64")
+)
 
 conn = sqlite3.connect(DB_PATH)
 df.to_sql("allowed_amounts", conn, if_exists="replace", index=False)
