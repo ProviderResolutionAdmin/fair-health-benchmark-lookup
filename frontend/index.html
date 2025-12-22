@@ -62,7 +62,7 @@
   <label>Procedure Code</label>
   <input id="code" type="number" />
 
-  <label>Modifier (optional)</label>
+  <label>Modifier (Utilize when necessary)</label>
   <input id="modifier" type="number" />
 
   <br />
@@ -74,6 +74,7 @@
     <thead>
       <tr>
         <th>Description</th>
+<th>Match Type</th>
         <th>50th</th>
         <th>60th</th>
         <th>70th</th>
@@ -120,16 +121,17 @@ async function lookup() {
 
     const row = document.getElementById("resultRow");
     row.innerHTML = `
-      <td>${data.description || ""}</td>
-      <td>${data["50th"] || ""}</td>
-      <td>${data["60th"] || ""}</td>
-      <td>${data["70th"] || ""}</td>
-      <td>${data["75th"] || ""}</td>
-      <td>${data["80th"] || ""}</td>
-      <td>${data["85th"] || ""}</td>
-      <td>${data["90th"] || ""}</td>
-      <td>${data["95th"] || ""}</td>
-    `;
+  <td>${data.description || ""}</td>
+  <td>${data.match_type || ""}</td>
+  <td>${data["50th"] || ""}</td>
+  <td>${data["60th"] || ""}</td>
+  <td>${data["70th"] || ""}</td>
+  <td>${data["75th"] || ""}</td>
+  <td>${data["80th"] || ""}</td>
+  <td>${data["85th"] || ""}</td>
+  <td>${data["90th"] || ""}</td>
+  <td>${data["95th"] || ""}</td>
+`;
 
     document.getElementById("results").style.display = "table";
 
