@@ -11,7 +11,7 @@ UI_PATH = Path("frontend/index.html")
 
 
 # -----------------------
-# Database helper
+# Database helpers
 # -----------------------
 def get_connection():
     if not DB_PATH.exists():
@@ -25,13 +25,17 @@ def get_connection():
 
 
 def ensure_log_table(conn):
+    """
+    Create usage log table if it does not exist.
+    Code is stored as TEXT to match lookup behavior.
+    """
     conn.execute("""
     CREATE TABLE IF NOT EXISTS lookup_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         lookup_time TEXT NOT NULL,
         geozip INTEGER NOT NULL,
-        code INTEGER NOT NULL,
-        modifier INTEGER,
+        code TEXT NOT NULL,
+        modifier TEXT,
         match_type TEXT,
         success INTEGER NOT NULL
     )
@@ -72,20 +76,24 @@ def serve_ui():
 
 
 # -----------------------
-# Lookup API with logging
+# Lookup API (corrected + hardened)
 # -----------------------
 @app.get("/lookup")
 def lookup(
     geozip: int = Query(..., description="Geographic ZIP"),
-    code: int = Query(..., description="Procedure code"),
-    modifier: int | None = Query(default=None)
+    code: str = Query(..., description="Procedure code"),
+    modifier: str | None = Query(default=None)
 ):
     conn = get_connection()
     ensure_log_table(conn)
 
+    # Normalize inputs
+    code = code.strip()
+    modifier = modifier.strip() if modifier else None
+
     try:
-        # 1. Modifier-specific rate (only if modifier entered)
-        if modifier is not None:
+        # 1. Modifier-specific lookup (only if modifier entered)
+        if modifier:
             row = conn.execute(
                 """
                 SELECT *
@@ -103,14 +111,14 @@ def lookup(
                 log_lookup(conn, geozip, code, modifier, result["match_type"], 1)
                 return result
 
-        # 2. Base rate (normal path)
+        # 2. Base rate (normal path — no modifier)
         row = conn.execute(
             """
             SELECT *
             FROM allowed_amounts
             WHERE geozip = ?
               AND code = ?
-              AND modifier IS NULL
+              AND (modifier IS NULL OR modifier = '')
             """,
             (geozip, code)
         ).fetchone()
@@ -126,7 +134,7 @@ def lookup(
             log_lookup(conn, geozip, code, modifier, match_type, 1)
             return result
 
-        # 3. No match
+        # 3. No match found
         log_lookup(conn, geozip, code, modifier, "No match found", 0)
         raise HTTPException(
             status_code=404,
