@@ -14,14 +14,17 @@ UI_PATH = Path("frontend/index.html")
 # -----------------------
 def get_connection():
     if not DB_PATH.exists():
-        raise RuntimeError("Database not found. Run the build workflow first.")
+        raise HTTPException(
+            status_code=500,
+            detail="Allowed amounts database not found. Data build may not have run."
+        )
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 # -----------------------
-# UI (root page)
+# UI
 # -----------------------
 @app.get("/", response_class=HTMLResponse)
 def serve_ui():
@@ -31,47 +34,68 @@ def serve_ui():
 
 
 # -----------------------
-# Lookup API
+# Lookup API with validation + fallback
 # -----------------------
 @app.get("/lookup")
 def lookup(
-    geozip: int,
-    code: int,
+    geozip: int = Query(..., description="Geographic ZIP"),
+    code: int = Query(..., description="Procedure code"),
     modifier: int | None = Query(default=None)
 ):
     conn = get_connection()
 
     try:
+        # 1. Exact match if modifier provided
         if modifier is not None:
-            query = """
+            exact_query = """
             SELECT *
             FROM allowed_amounts
             WHERE geozip = ?
               AND code = ?
               AND modifier = ?
             """
-            params = (geozip, code, modifier)
-        else:
-            query = """
-            SELECT *
-            FROM allowed_amounts
-            WHERE geozip = ?
-              AND code = ?
-              AND modifier IS NULL
-            """
-            params = (geozip, code)
+            row = conn.execute(
+                exact_query, (geozip, code, modifier)
+            ).fetchone()
 
-        row = conn.execute(query, params).fetchone()
+            if row:
+                result = dict(row)
+                result["match_type"] = "Exact match on modifier"
+                return result
 
-        if not row:
-            raise HTTPException(
-                status_code=404,
-                detail="No matching record found"
+        # 2. Fallback to no-modifier row
+        fallback_query = """
+        SELECT *
+        FROM allowed_amounts
+        WHERE geozip = ?
+          AND code = ?
+          AND modifier IS NULL
+        """
+        row = conn.execute(
+            fallback_query, (geozip, code)
+        ).fetchone()
+
+        if row:
+            result = dict(row)
+            result["match_type"] = (
+                "Fallback match (no modifier on file)"
+                if modifier is not None
+                else "Base match (no modifier)"
             )
+            return result
 
-        return dict(row)
+        # 3. No match found
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"No allowed amount found for GeoZip {geozip}, "
+                f"Code {code}"
+                + (f", Modifier {modifier}" if modifier else "")
+            )
+        )
 
     finally:
         conn.close()
+
 
 
