@@ -73,6 +73,11 @@
     .code-cell {
       font-family: monospace;
     }
+
+    .total-row {
+      font-weight: bold;
+      border-top: 2px solid #000;
+    }
   </style>
 </head>
 
@@ -124,6 +129,11 @@
   <tbody id="resultRows"></tbody>
 </table>
 
+<div style="margin-top:8px; font-size:12px; color:#555;">
+  Totals reflect simple sums of Fair Health benchmark percentiles for the selected procedure codes.
+  They do not account for claim-level edits, bundling, coverage, or pricing rules.
+</div>
+
 <script>
 document.getElementById("lookupForm").addEventListener("submit", e => {
   e.preventDefault();
@@ -131,6 +141,11 @@ document.getElementById("lookupForm").addEventListener("submit", e => {
 });
 
 document.getElementById("copyBtn").addEventListener("click", copyResults);
+
+function parseNumber(val) {
+  if (!val) return 0;
+  return Number(val.toString().replace(/[^0-9.-]+/g, "")) || 0;
+}
 
 async function lookup() {
   const errorDiv = document.getElementById("error");
@@ -143,8 +158,11 @@ async function lookup() {
   copyBtn.style.display = "none";
   rowsContainer.innerHTML = "";
 
-  const geozip = geozipInput();
-  const codes = codeList();
+  const geozip = document.getElementById("geozip").value.trim();
+  const codes = document.getElementById("codes").value
+    .split(/\r?\n/)
+    .map(c => c.trim())
+    .filter(Boolean);
   const modifier = document.getElementById("modifier").value.trim();
 
   if (!geozip || codes.length === 0) {
@@ -165,6 +183,11 @@ async function lookup() {
 
   const results = await response.json();
 
+  let totals = {
+    "50th": 0, "60th": 0, "70th": 0, "75th": 0,
+    "80th": 0, "85th": 0, "90th": 0, "95th": 0
+  };
+
   results.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -182,7 +205,31 @@ async function lookup() {
       <td>${r["95th"] || ""}</td>
     `;
     rowsContainer.appendChild(tr);
+
+    if (!r.match_type?.toLowerCase().includes("no match")) {
+      Object.keys(totals).forEach(p => {
+        totals[p] += parseNumber(r[p]);
+      });
+    }
   });
+
+  const totalRow = document.createElement("tr");
+  totalRow.className = "total-row";
+  totalRow.innerHTML = `
+    <td>Total (reference only)</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td>${totals["50th"].toFixed(2)}</td>
+    <td>${totals["60th"].toFixed(2)}</td>
+    <td>${totals["70th"].toFixed(2)}</td>
+    <td>${totals["75th"].toFixed(2)}</td>
+    <td>${totals["80th"].toFixed(2)}</td>
+    <td>${totals["85th"].toFixed(2)}</td>
+    <td>${totals["90th"].toFixed(2)}</td>
+    <td>${totals["95th"].toFixed(2)}</td>
+  `;
+  rowsContainer.appendChild(totalRow);
 
   resultsTable.style.display = "table";
   copyBtn.style.display = "inline-block";
@@ -194,28 +241,17 @@ function copyResults() {
 
   let lines = [];
   const headers = Array.from(table.querySelectorAll("thead th"))
-    .map(th => th.innerText.trim());
-  lines.push(headers.join("\t"));
+    .map(th => `"${th.innerText.trim()}"`);
+  lines.push(headers.join(","));
 
   table.querySelectorAll("tbody tr").forEach(row => {
     const cells = Array.from(row.querySelectorAll("td"))
-      .map(td => td.innerText.replace(/\s+/g, " ").trim());
-    lines.push(cells.join("\t"));
+      .map(td => `"${td.innerText.replace(/\s+/g, " ").trim()}"`);
+    lines.push(cells.join(","));
   });
 
   navigator.clipboard.writeText(lines.join("\n"))
-    .then(() => alert("Results copied to clipboard."));
-}
-
-function geozipInput() {
-  return document.getElementById("geozip").value.trim();
-}
-
-function codeList() {
-  return document.getElementById("codes").value
-    .split(/\r?\n/)
-    .map(c => c.trim())
-    .filter(Boolean);
+    .then(() => alert("Results copied (CSV format). Paste into Excel."));
 }
 </script>
 
