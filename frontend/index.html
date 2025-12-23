@@ -126,6 +126,7 @@
     <thead>
       <tr>
         <th>Procedure Code</th>
+        <th>Product</th>
         <th>Description</th>
         <th>Match Type</th>
         <th>50th</th>
@@ -195,6 +196,7 @@
         const row = document.createElement("tr");
         row.innerHTML = `
           <td class="code-cell">${data.code || ""}</td>
+          <td>${data.product || ""}</td>
           <td>${data.description || ""}</td>
           <td class="match-type">${data.match_type || ""}</td>
           <td>${data["50th"] || ""}</td>
