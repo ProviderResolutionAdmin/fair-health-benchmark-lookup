@@ -220,26 +220,49 @@
     }
   }
 
-  function copyResults() {
-    const table = document.getElementById("results");
-    if (table.style.display === "none") return;
+ <script>
+function copyResults() {
+  const table = document.getElementById("results");
+  if (table.style.display === "none") return;
 
-    let text = "";
-    const rows = table.querySelectorAll("tr");
+  let lines = [];
 
-    rows.forEach(row => {
-      const cells = row.querySelectorAll("th, td");
-      const rowText = Array.from(cells)
-        .map(cell => cell.innerText.trim())
-        .join("\t");
-      text += rowText + "\n";
+  // 1. Capture headers
+  const headers = Array.from(
+    table.querySelectorAll("thead th")
+  ).map(th =>
+    th.innerText
+      .replace(/\s+/g, " ")
+      .trim()
+  );
+
+  lines.push(headers.join("\t"));
+
+  // 2. Capture rows
+  const rows = table.querySelectorAll("tbody tr");
+  rows.forEach(row => {
+    const cells = Array.from(row.querySelectorAll("td")).map(td =>
+      td.innerText
+        .replace(/\r?\n|\r/g, " ")   // remove line breaks inside cells
+        .replace(/\s+/g, " ")        // normalize spacing
+        .trim()
+    );
+    lines.push(cells.join("\t"));
+  });
+
+  // 3. Write to clipboard
+  const output = lines.join("\n");
+
+  navigator.clipboard.writeText(output)
+    .then(() => {
+      alert("Results copied to clipboard.");
+    })
+    .catch(() => {
+      alert("Unable to copy results.");
     });
-
-    navigator.clipboard.writeText(text)
-      .then(() => alert("Results copied to clipboard."))
-      .catch(() => alert("Unable to copy results."));
-  }
+}
 </script>
+
 
 </body>
 </html>
