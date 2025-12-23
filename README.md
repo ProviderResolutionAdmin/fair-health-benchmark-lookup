@@ -1,19 +1,19 @@
-# TX-FH-Allowed-Medical
+# Fair Health Benchmark Lookup
 
-Lookup tool for Texas Fair Health allowed medical amounts.
+A lightweight internal tool for querying Fair Health benchmark data
+by geographic ZIP and procedure code.
 
-## Purpose
-Allows associates to enter:
-- GeoZip
-- Procedure Code
-- Modifier (optional)
+## What it does
+- Accepts one or more procedure codes
+- Returns available Fair Health benchmark percentiles
+- Supports multiple products and datasets
+- Displays product type when applicable
 
-And returns:
-- Procedure description
-- Allowed amount percentiles (50th–95th)
+## What it does not do
+- It does not infer eligibility
+- It does not replace pricing logic
+- It does not guarantee completeness for all codes or regions
 
 ## Data
-Source data is maintained outside the application and versioned by release month.
-
-## Status
-Initial scaffolding in progress.
+- Source data is maintained in versioned Excel files
+- Multiple datasets are ingested into a single reference table
