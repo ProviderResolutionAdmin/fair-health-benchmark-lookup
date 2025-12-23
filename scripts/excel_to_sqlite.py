@@ -20,6 +20,15 @@ df.columns = (
     .str.replace(" ", "_")
     .str.replace("%", "th")
 )
+# Normalize product column (Column A)
+if "product" not in df.columns:
+    raise ValueError("Expected 'product' column not found in Excel (Column A)")
+
+df["product"] = (
+    df["product"]
+    .astype(str)
+    .str.strip()
+)
 # Normalize description column
 if "full_description" in df.columns:
     df = df.rename(columns={"full_description": "description"})
