@@ -107,19 +107,23 @@ def lookup(
                 params_base.append(product_clean)
 
             # 1) If modifier provided, fetch all modifier-specific rows (could be multiple products)
-            modifier_rows = []
-            if modifier_clean:
-                modifier_rows = conn.execute(
-                    f"""
-                    SELECT *
-                    FROM allowed_amounts
-                    WHERE geozip = ?
-                      AND code = ?
-                      AND modifier = ?
-                      {product_clause}
-                    """,
-                    params_base + [modifier_clean]  # modifier last
-                ).fetchall()
+modifier_rows = []
+if modifier_clean:
+    modifier_params = [geozip, code_clean, modifier_clean]
+    if product_clean:
+        modifier_params.append(product_clean)
+
+    modifier_rows = conn.execute(
+        f"""
+        SELECT *
+        FROM allowed_amounts
+        WHERE geozip = ?
+          AND code = ?
+          AND modifier = ?
+          {product_clause}
+        """,
+        modifier_params
+    ).fetchall()
 
             # Map modifier rows by product for easy comparison
             modifier_by_product = {}
